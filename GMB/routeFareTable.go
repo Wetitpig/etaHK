@@ -75,11 +75,13 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 			}
 			switch len(w) {
 			case 1:
-				j++
-				fareNotes.WriteString(strconv.Itoa(j))
-				fareNotes.WriteString(". ")
-				fareNotes.WriteString(v)
-				fareNotes.WriteRune('\n')
+				if !strings.Contains(fareNotes.String(), v) {
+					j++
+					fareNotes.WriteString(strconv.Itoa(j))
+					fareNotes.WriteString(". ")
+					fareNotes.WriteString(v)
+					fareNotes.WriteRune('\n')
+				}
 			case 2:
 				for e, dir := range rt.directions {
 					if strings.Contains(dir.orig[i], w[1]) {
@@ -141,17 +143,40 @@ func (dir *direction) renderRouteFares(fn ui.Lang, t *tview.Grid) {
 		r++
 	}
 
+	notesView := tview.NewTextView().
+		SetChangedFunc(ui.HDraw).
+		SetDynamicColors(true).
+		SetWrap(true)
 	if len(fn) > 0 {
-		textView := tview.NewTextView().
-			SetText(fn[ui.UserLang]).
-			SetChangedFunc(ui.HDraw).
-			SetDynamicColors(true).
-			SetWrap(true)
-		t.AddItem(textView,
-			r, 0, 1, rc, 0, 0, false)
+		notesView.SetText(fn[ui.UserLang])
+		t.AddItem(notesView, r, 0, 1, rc, 0, 0, false)
 		origHeights = append(origHeights, tview.TaggedStringWidth(fn[ui.UserLang]), strings.Count(fn[ui.UserLang], "\n"))
 	}
 
+	height := make([]int, rc+3)
+	t.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyUp:
+			r, c := notesView.GetScrollOffset()
+			if r == 0 {
+				r, c = t.GetOffset()
+				t.SetOffset(r-1, c)
+			} else {
+				notesView.ScrollTo(r-1, c)
+			}
+			return nil
+		case tcell.KeyDown:
+			r, c := t.GetOffset()
+			if r == len(dir.fareTable)+2 {
+				r, c = notesView.GetScrollOffset()
+				notesView.ScrollTo(r+1, c)
+			} else {
+				t.SetOffset(r+1, c)
+			}
+			return nil
+		}
+		return event
+	})
 	delete(ui.BeforeDrawFn, "renderRouteFares")
 	ui.BeforeDrawFn["renderRouteFares"] = func(tcell.Screen) bool {
 		if name, pages := ui.Pages.GetFrontPage(); name == "routeGMB" {
@@ -159,16 +184,17 @@ func (dir *direction) renderRouteFares(fn ui.Lang, t *tview.Grid) {
 				w, _ := consolesize.GetConsoleSize()
 				rc := len(dir.fareTable)
 
-				height := make([]int, 2, rc+2)
 				height[0], height[1] = 1, 1
 				for i, width := range origHeights[:rc] {
 					rw := (w / rc * (rc - i))
-					height = append(height, (width+rw-1)/rw)
+					height[i+2] = (width + rw - 1) / rw
 				}
 				if last := rc; len(origHeights) > last {
-					height = append(height, (origHeights[last]+w-1)/w+origHeights[last+1])
+					height[rc+2] = (origHeights[last]+w-1)/w + origHeights[last+1]
+					t.SetRows(height...)
+				} else {
+					t.SetRows(height[:rc+2]...)
 				}
-				t.SetRows(height...)
 			}
 		}
 		return false

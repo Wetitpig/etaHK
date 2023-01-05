@@ -9,7 +9,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/nathan-fiscaletti/consolesize-go v0.0.0-20220204101620-317176b6684d
 	github.com/rivo/tview v0.0.0-20230104153304-892d1a2eb0da
-	golang.org/x/exp v0.0.0-20221230185412-738e83a70c30
+	golang.org/x/exp v0.0.0-20230105000112-eab7a2c85304
 )
 
 require (
