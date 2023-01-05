@@ -2,6 +2,7 @@ package ui
 
 import (
 	"bytes"
+	"log"
 
 	"github.com/rivo/tview"
 )
@@ -10,6 +11,18 @@ var (
 	App   *tview.Application
 	Pages *tview.Pages
 )
+
+func Fatalln(s ...any) {
+	App.Stop()
+	log.Fatalln(s...)
+}
+
+func Panic() {
+	if r := recover(); r != nil {
+		App.Stop()
+		panic(r)
+	}
+}
 
 const RefreshInterval = 30
 

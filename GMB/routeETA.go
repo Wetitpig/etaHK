@@ -2,7 +2,6 @@ package GMB
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -40,13 +39,13 @@ func (r *route) listStops(wg *sync.WaitGroup, id, i int) {
 	defer wg.Done()
 	resp, err := http.Get(GMBAPIBASE + "/route-stop/" + strconv.Itoa(id) + "/" + strconv.Itoa(i+1))
 	if err != nil {
-		log.Fatalln("Unable to obtain GMB stop info for route", r.code, "in region", region)
+		ui.Fatalln("Unable to obtain GMB stop info for route", r.code, "in region", region)
 	}
 	defer resp.Body.Close()
 
 	var pj getData
 	if json.NewDecoder(resp.Body).Decode(&pj) != nil {
-		log.Fatalln("Unable to unmarshal GMB stop list for route", r.code, "in region", region)
+		ui.Fatalln("Unable to unmarshal GMB stop list for route", r.code, "in region", region)
 	}
 
 	rs := pj.Data.(map[string]interface{})["route_stops"].([]interface{})

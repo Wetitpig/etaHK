@@ -10,6 +10,7 @@ import (
 )
 
 func main() {
+	defer ui.Panic()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	ui.App = tview.NewApplication()
 	ui.UserLang = ui.TC

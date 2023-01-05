@@ -1,7 +1,6 @@
 package GMB
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,12 +25,12 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 		go func(lang int) {
 			resp, err := http.Get("https://h2-app-rr.hkemobility.gov.hk/ris_page/get_gmb_detail.php?route_id=" + strconv.Itoa(id) + "&lang=" + ui.Language(lang).String())
 			if err != nil {
-				log.Fatalln("Cannot obtain fare table for GMB route", id)
+				ui.Fatalln("Cannot obtain fare table for GMB route", id)
 			}
 			defer resp.Body.Close()
 			html, err := goquery.NewDocumentFromReader(resp.Body)
 			if err != nil {
-				log.Fatalln("Cannot parse fare table for GMB route", id)
+				ui.Fatalln("Cannot parse fare table for GMB route", id)
 			}
 
 			fareTableHtml := html.Find(".table_hd1")

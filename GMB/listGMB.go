@@ -2,7 +2,6 @@ package GMB
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -159,13 +158,13 @@ func renderRoutes() (form *tview.Form) {
 func searchRoutes() (routeMap map[string][]string) {
 	resp, err := http.Get(GMBAPIBASE + "/route")
 	if err != nil {
-		log.Fatalln("Unable to obtain GMB route list.")
+		ui.Fatalln("Unable to obtain GMB route list.")
 	}
 	defer resp.Body.Close()
 
 	var pj getData
 	if json.NewDecoder(resp.Body).Decode(&pj) != nil {
-		log.Fatalln("Unable to unmarshal GMB route list.")
+		ui.Fatalln("Unable to unmarshal GMB route list.")
 	}
 	routes := pj.Data.(map[string]interface{})["routes"].(map[string]interface{})
 
@@ -208,13 +207,13 @@ func ListGMB() {
 
 				resp, err := http.Get(GMBAPIBASE + "/route/" + region + "/" + routeCode)
 				if err != nil {
-					log.Fatalln("Unable to obtain GMB route info for route", routeCode, "in region", region)
+					ui.Fatalln("Unable to obtain GMB route info for route", routeCode, "in region", region)
 				}
 				defer resp.Body.Close()
 
 				var pj getData
 				if json.NewDecoder(resp.Body).Decode(&pj) != nil {
-					log.Fatalln("Unable to unmarshal GMB route list.")
+					ui.Fatalln("Unable to unmarshal GMB route list.")
 				}
 				for _, ri := range pj.Data.([]interface{}) {
 					routeInfo := ri.(map[string]interface{})

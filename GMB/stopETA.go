@@ -2,7 +2,6 @@ package GMB
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -88,12 +87,12 @@ func (stopT stop) queueStopETA(msg int) {
 func (s *stop) listStopRoutes(id int) {
 	resp, err := http.Get(GMBAPIBASE + "/stop-route/" + strconv.Itoa(id))
 	if err != nil {
-		log.Fatalln("Unable to obtain GMB stop info for stop", id)
+		ui.Fatalln("Unable to obtain GMB stop info for stop", id)
 	}
 	defer resp.Body.Close()
 	var pj getData
 	if json.NewDecoder(resp.Body).Decode(&pj) != nil {
-		log.Fatalln("Unable to unmarshal GMB stop info for stop", id)
+		ui.Fatalln("Unable to unmarshal GMB stop info for stop", id)
 	}
 	for _, st := range pj.Data.([]interface{}) {
 		sr := st.(map[string]interface{})
