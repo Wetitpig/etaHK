@@ -44,7 +44,7 @@ var (
 	routeRID []int
 )
 
-const GMBAPIBASE = "https://data.etagmb.gov.hk"
+const APIBASE = "https://data.etagmb.gov.hk"
 
 type getData struct {
 	Data interface{} `json:"data"`
@@ -156,7 +156,7 @@ func renderRoutes() (form *tview.Form) {
 }
 
 func searchRoutes() (routeMap map[string][]string) {
-	resp, err := http.Get(GMBAPIBASE + "/route")
+	resp, err := http.Get(APIBASE + "/route")
 	if err != nil {
 		ui.Fatalln("Unable to obtain GMB route list.")
 	}
@@ -205,7 +205,7 @@ func ListGMB() {
 			go func(region, routeCode string) {
 				defer workGp.Done()
 
-				resp, err := http.Get(GMBAPIBASE + "/route/" + region + "/" + routeCode)
+				resp, err := http.Get(APIBASE + "/route/" + region + "/" + routeCode)
 				if err != nil {
 					ui.Fatalln("Unable to obtain GMB route info for route", routeCode, "in region", region)
 				}

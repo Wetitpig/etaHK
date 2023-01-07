@@ -54,7 +54,7 @@ func (data *stop) renderStopETA(view *tview.TextView, end chan bool) {
 }
 
 func (stopT stop) queueStopETA(msg int) {
-	if resp, err := http.Get(GMBAPIBASE + "/eta/stop/" + strconv.Itoa(msg)); err == nil {
+	if resp, err := http.Get(APIBASE + "/eta/stop/" + strconv.Itoa(msg)); err == nil {
 		defer resp.Body.Close()
 		var pj getData
 		if json.NewDecoder(resp.Body).Decode(&pj) == nil {
@@ -85,7 +85,7 @@ func (stopT stop) queueStopETA(msg int) {
 }
 
 func (s *stop) listStopRoutes(id int) {
-	resp, err := http.Get(GMBAPIBASE + "/stop-route/" + strconv.Itoa(id))
+	resp, err := http.Get(APIBASE + "/stop-route/" + strconv.Itoa(id))
 	if err != nil {
 		ui.Fatalln("Unable to obtain GMB stop info for stop", id)
 	}

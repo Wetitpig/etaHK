@@ -37,7 +37,7 @@ func renderRouteETA(view *tview.TextView, id, sDir int, end chan bool) {
 
 func (r *route) listStops(wg *sync.WaitGroup, id, i int) {
 	defer wg.Done()
-	resp, err := http.Get(GMBAPIBASE + "/route-stop/" + strconv.Itoa(id) + "/" + strconv.Itoa(i+1))
+	resp, err := http.Get(APIBASE + "/route-stop/" + strconv.Itoa(id) + "/" + strconv.Itoa(i+1))
 	if err != nil {
 		ui.Fatalln("Unable to obtain GMB stop info for route", r.code, "in region", region)
 	}
@@ -61,7 +61,7 @@ func (r *route) listStops(wg *sync.WaitGroup, id, i int) {
 
 func (r *route) queueRouteETA(wg *sync.WaitGroup, etaLock *sync.Mutex, id, i, msg int) {
 	defer wg.Done()
-	if resp, err := http.Get(GMBAPIBASE + "/eta/route-stop/" + strconv.Itoa(id) + "/" + strconv.Itoa(msg+1) + "/" + strconv.Itoa(i+1)); err == nil {
+	if resp, err := http.Get(APIBASE + "/eta/route-stop/" + strconv.Itoa(id) + "/" + strconv.Itoa(msg+1) + "/" + strconv.Itoa(i+1)); err == nil {
 		defer resp.Body.Close()
 		var pj getData
 		if json.NewDecoder(resp.Body).Decode(&pj) == nil {

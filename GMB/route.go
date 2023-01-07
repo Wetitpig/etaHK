@@ -35,11 +35,13 @@ func initRouteDetail() (newFlex *tview.Flex, view *tview.TextView) {
 				0, 75, true)
 		ui.Pages.AddAndSwitchToPage("routeGMB", newFlex, true)
 	} else {
-		ui.Pages.SwitchToPage("routeGMB")
-		_, nf := ui.Pages.GetFrontPage()
+		_, nf := ui.Pages.
+			SwitchToPage("routeGMB").
+			GetFrontPage()
 		newFlex = nf.(*tview.Flex)
-		newFlex.GetItem(2).(*tview.Pages).SwitchToPage("eta")
-		_, nv := newFlex.GetItem(2).(*tview.Pages).GetFrontPage()
+		_, nv := newFlex.GetItem(2).(*tview.Pages).
+			SwitchToPage("eta").
+			GetFrontPage()
 		view = nv.(*tview.TextView)
 	}
 	return

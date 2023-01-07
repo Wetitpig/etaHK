@@ -83,22 +83,28 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 					fareNotes.WriteRune('\n')
 				}
 			case 2:
+				d = -1
 				for e, dir := range rt.directions {
 					if strings.Contains(dir.orig[i], w[1]) {
 						d, k = e, 0
 						break
 					}
 				}
+				if d < 0 {
+					continue
+				}
 				fallthrough
 			default:
-				w = w[1:]
-				if i == 0 {
-					rt.directions[d].fareTable = append(rt.directions[d].fareTable, make([]ui.Lang, len(w)))
+				if d >= 0 {
+					w = w[1:]
+					if i == 0 {
+						rt.directions[d].fareTable = append(rt.directions[d].fareTable, make([]ui.Lang, len(w)))
+					}
+					for l, x := range w {
+						rt.directions[d].fareTable[k][l][i] = x
+					}
+					k++
 				}
-				for l, x := range w {
-					rt.directions[d].fareTable[k][l][i] = x
-				}
-				k++
 			}
 		}
 		if j == 0 {
