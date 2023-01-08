@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/Wetitpig/etaHK/ui"
+	"github.com/agnivade/levenshtein"
 	"github.com/gdamore/tcell/v2"
 	"github.com/nathan-fiscaletti/consolesize-go"
 	"github.com/rivo/tview"
@@ -58,13 +59,20 @@ func renderRoutesEvery(form *tview.Form) {
 	view := form.GetFormItem(2).(*tview.TextView)
 	selected := ui.RetainHighlight(view)
 	routeRID = routeRID[:0]
+	searchStr := form.GetFormItem(1).(*tview.InputField).GetText()
 	for i, v := range routeList {
-		if searchStr := form.GetFormItem(1).(*tview.InputField).GetText(); strings.Contains(strings.ToUpper(v.code), strings.ToUpper(searchStr)) && v.region == region {
+		if strings.Contains(strings.ToUpper(v.code), strings.ToUpper(searchStr)) && v.region == region {
 			routeRID = append(routeRID, i)
 		}
 	}
 	slices.SortFunc(routeRID, func(i, j int) bool {
-		return routeList[i].code < routeList[j].code
+		i_len := levenshtein.ComputeDistance(searchStr, routeList[i].code)
+		j_len := levenshtein.ComputeDistance(searchStr, routeList[j].code)
+		if i_len == j_len {
+			return routeList[i].code < routeList[j].code
+		} else {
+			return i_len < j_len
+		}
 	})
 
 	buf := new(ui.TextViewBuffer)

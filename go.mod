@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.3.6
 	github.com/PuerkitoBio/goquery v1.8.0
+	github.com/agnivade/levenshtein v1.1.1
 	github.com/gdamore/tcell/v2 v2.5.4
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/nathan-fiscaletti/consolesize-go v0.0.0-20220204101620-317176b6684d
