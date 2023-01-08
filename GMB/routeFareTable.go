@@ -66,7 +66,10 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 		md = strings.Replace(md, "\n\n", "\n", -1)
 		rows := strings.Split(md, "\n")
 
-		var j, k, d int
+		var (
+			j    bool
+			k, d int
+		)
 		fareNotes.Reset()
 		for _, v := range rows {
 			w := strings.Split(v, " · ")
@@ -76,11 +79,9 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 			switch len(w) {
 			case 1:
 				if !strings.Contains(fareNotes.String(), v) {
-					j++
-					fareNotes.WriteString(strconv.Itoa(j))
-					fareNotes.WriteString(". ")
+					j = true
 					fareNotes.WriteString(v)
-					fareNotes.WriteRune('\n')
+					fareNotes.WriteString("\n\n")
 				}
 			case 2:
 				d = -1
@@ -107,7 +108,7 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 				}
 			}
 		}
-		if j == 0 {
+		if !j {
 			rt.fareNotes[i] = ""
 		} else {
 			rt.fareNotes[i] += fareNotes.String()

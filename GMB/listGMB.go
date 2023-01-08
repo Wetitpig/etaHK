@@ -112,8 +112,13 @@ func renderRoutes() (form *tview.Form) {
 		AddTextView("", "", 0, h-7, true, true)
 
 	changeLang := func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyRune && (event.Rune() == 't' || event.Rune() == 's' || event.Rune() == 'e') {
-			renderRoutesLang(form)
+		if event.Key() == tcell.KeyRune {
+			switch event.Rune() {
+			case 't', 's', 'e':
+				renderRoutesLang(form)
+			case 'h':
+				ui.Pages.SwitchToPage("home")
+			}
 		}
 		return event
 	}
@@ -185,60 +190,67 @@ var (
 )
 
 func ListGMB() {
-	region = "HKI"
+	if routeList == nil {
+		region = "HKI"
 
-	regionSelectLabel, routeSelectLabel = ui.Lang{"地區：", "地区：", "Region:"}, ui.Lang{"路綫號碼", "路线号码", "Route Number"}
-	regionLabels = map[string]ui.Lang{
-		"HKI": {"香港島", "香港岛", "HK Island"},
-		"KLN": {"九龍", "九龙", "Kowloon"},
-		"NT":  {"新界 ", "新界", "N.T."},
-	}
-	routes := searchRoutes()
-
-	var workGp sync.WaitGroup
-	routeList = make(map[int]*route)
-	var routeLock sync.Mutex
-
-	for region, routeReg := range routes {
-		workGp.Add(len(routeReg))
-		for _, routeCode := range routeReg {
-			go func(region, routeCode string) {
-				defer workGp.Done()
-
-				resp, err := http.Get(APIBASE + "/route/" + region + "/" + routeCode)
-				if err != nil {
-					ui.Fatalln("Unable to obtain GMB route info for route", routeCode, "in region", region)
-				}
-				defer resp.Body.Close()
-
-				var pj getData
-				if json.NewDecoder(resp.Body).Decode(&pj) != nil {
-					ui.Fatalln("Unable to unmarshal GMB route list.")
-				}
-				for _, ri := range pj.Data.([]interface{}) {
-					routeInfo := ri.(map[string]interface{})
-					dirInfo := routeInfo["directions"].([]interface{})
-
-					routeData := route{
-						routeCode, region, formLang(routeInfo, "description"), make([]direction, len(dirInfo)), ui.Lang{
-							"[yellow::u]備註[::-]\n", "[yellow::u]备注[::-]\n", "[yellow::u]Notes[::-]\n",
-						},
-					}
-
-					for _, d := range dirInfo {
-						dir := d.(map[string]interface{})
-						routeData.directions[int(dir["route_seq"].(float64))-1] = direction{
-							formLang(dir, "orig"), formLang(dir, "dest"), formLang(routeInfo, "remarks"), []routeStop{}, nil,
-						}
-					}
-					routeLock.Lock()
-					routeList[int(routeInfo["route_id"].(float64))] = &routeData
-					routeLock.Unlock()
-				}
-			}(region, routeCode)
+		regionSelectLabel, routeSelectLabel = ui.Lang{"地區：", "地区：", "Region:"}, ui.Lang{"路綫號碼", "路线号码", "Route Number"}
+		regionLabels = map[string]ui.Lang{
+			"HKI": {"香港島", "香港岛", "HK Island"},
+			"KLN": {"九龍", "九龙", "Kowloon"},
+			"NT":  {"新界 ", "新界", "N.T."},
 		}
-	}
-	workGp.Wait()
+		routes := searchRoutes()
 
-	ui.Pages.AddAndSwitchToPage("routesGMB", renderRoutes(), true)
+		var workGp sync.WaitGroup
+		routeList = make(map[int]*route)
+		var routeLock sync.Mutex
+
+		for region, routeReg := range routes {
+			workGp.Add(len(routeReg))
+			for _, routeCode := range routeReg {
+				go func(region, routeCode string) {
+					defer workGp.Done()
+
+					resp, err := http.Get(APIBASE + "/route/" + region + "/" + routeCode)
+					if err != nil {
+						ui.Fatalln("Unable to obtain GMB route info for route", routeCode, "in region", region)
+					}
+					defer resp.Body.Close()
+
+					var pj getData
+					if json.NewDecoder(resp.Body).Decode(&pj) != nil {
+						ui.Fatalln("Unable to unmarshal GMB route list.")
+					}
+					for _, ri := range pj.Data.([]interface{}) {
+						routeInfo := ri.(map[string]interface{})
+						dirInfo := routeInfo["directions"].([]interface{})
+
+						routeData := route{
+							routeCode, region, formLang(routeInfo, "description"), make([]direction, len(dirInfo)), ui.Lang{
+								"[yellow::u]備註[::-]\n", "[yellow::u]备注[::-]\n", "[yellow::u]Notes[::-]\n",
+							},
+						}
+
+						for _, d := range dirInfo {
+							dir := d.(map[string]interface{})
+							routeData.directions[int(dir["route_seq"].(float64))-1] = direction{
+								formLang(dir, "orig"), formLang(dir, "dest"), formLang(routeInfo, "remarks"), []routeStop{}, nil,
+							}
+						}
+						routeLock.Lock()
+						routeList[int(routeInfo["route_id"].(float64))] = &routeData
+						routeLock.Unlock()
+					}
+				}(region, routeCode)
+			}
+		}
+		workGp.Wait()
+
+		ui.Pages.AddAndSwitchToPage("routesGMB", renderRoutes(), true)
+	} else {
+		ui.Pages.SwitchToPage("routesGMB")
+		_, nf := ui.Pages.GetFrontPage()
+		form := nf.(*tview.Form)
+		renderRoutesLang(form)
+	}
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 
-	"github.com/Wetitpig/etaHK/GMB"
 	"github.com/Wetitpig/etaHK/ui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -13,6 +12,13 @@ func main() {
 	defer ui.Panic()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	ui.App = tview.NewApplication()
+
+	ui.BeforeDrawFn = make(map[string]func(tcell.Screen) bool)
+	ui.App.SetBeforeDrawFunc(ui.RunBeforeDraw)
+	ui.Pages = tview.NewPages()
+
+	ui.Pages.AddAndSwitchToPage("home", homepage(), true)
+
 	ui.UserLang = ui.TC
 	ui.App.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		_, ok := ui.App.GetFocus().(*tview.TextArea)
@@ -31,11 +37,6 @@ func main() {
 		}
 		return event
 	})
-	ui.BeforeDrawFn = make(map[string]func(tcell.Screen) bool)
-	ui.App.SetBeforeDrawFunc(ui.RunBeforeDraw)
-	ui.Pages = tview.NewPages()
-
-	GMB.ListGMB()
 
 	if err := ui.App.SetRoot(ui.Pages, true).Run(); err != nil {
 		log.Fatalln(err)

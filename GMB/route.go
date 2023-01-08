@@ -86,11 +86,14 @@ func routeDetail(index, selectedDir int, seq int) {
 				stopChan <- false
 			case 't', 's', 'e':
 				stopChan <- true
-			case 'h':
+			case 'b':
 				close(stopChan)
 				ui.Pages.SwitchToPage("routesGMB")
 				_, form := ui.Pages.GetFrontPage()
 				renderRoutesLang(form.(*tview.Form))
+			case 'h':
+				close(stopChan)
+				ui.Pages.SwitchToPage("home")
 			}
 		}
 		return event
