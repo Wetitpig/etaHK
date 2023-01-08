@@ -13,6 +13,11 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+type stop struct {
+	stops map[stopLoc]*routeStop
+	keys  []stopLoc
+}
+
 func (stopT *stop) renderStopName(view *tview.TextView) {
 	var stopName string
 	var stopBuilder strings.Builder
@@ -109,8 +114,6 @@ func initStopETA() (newFlex *tview.Flex) {
 		newFlex = tview.NewFlex().
 			SetDirection(tview.FlexRow).
 			AddItem(tview.NewTextView().
-				SetChangedFunc(ui.HDraw), 0, 5, false).
-			AddItem(tview.NewTextView().
 				SetChangedFunc(ui.HDraw).
 				SetTextAlign(tview.AlignCenter), 0, 10, false).
 			AddItem(tview.NewTextView().
@@ -118,12 +121,12 @@ func initStopETA() (newFlex *tview.Flex) {
 				SetDynamicColors(true).
 				SetScrollable(true).
 				SetRegions(true).
-				SetToggleHighlights(false), 0, 85, true)
-		ui.Pages.AddAndSwitchToPage("stopGMB", newFlex, true)
+				SetToggleHighlights(false), 0, 90, true)
+		ui.Pages.AddAndSwitchToPage("stopGMB", tview.NewFrame(newFlex).SetBorders(0, 0, 0, 0, 0, 0), true)
 	} else {
 		ui.Pages.SwitchToPage("stopGMB")
 		_, nf := ui.Pages.GetFrontPage()
-		newFlex = nf.(*tview.Flex)
+		newFlex = nf.(*tview.Frame).GetPrimitive().(*tview.Flex)
 	}
 	return
 }
@@ -138,7 +141,7 @@ func stopETA(s routeStop, id *stopLoc) {
 
 	newFlex := initStopETA()
 	newFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		view := newFlex.GetItem(2).(*tview.TextView)
+		view := newFlex.GetItem(1).(*tview.TextView)
 		k := new(stopLoc)
 		k.unmarshal(view.GetHighlights()[0])
 		i := slices.Index(stopT.keys, *k)
@@ -180,16 +183,16 @@ func stopETA(s routeStop, id *stopLoc) {
 	}()
 
 	tick := time.NewTicker(time.Second)
-	newFlex.GetItem(2).(*tview.TextView).Highlight(id.marshal())
+	newFlex.GetItem(1).(*tview.TextView).Highlight(id.marshal())
 	for {
 		select {
 		case v, ok := <-stopChan:
 			if ok {
 				if v {
-					updateTime(newFlex, sCount)
-					stopT.renderStopName(newFlex.GetItem(1).(*tview.TextView))
+					updateTime(sCount)
+					stopT.renderStopName(newFlex.GetItem(0).(*tview.TextView))
 				}
-				stopT.renderStopETA(newFlex.GetItem(2).(*tview.TextView), stopChan)
+				stopT.renderStopETA(newFlex.GetItem(1).(*tview.TextView), stopChan)
 			} else {
 				close(etaChan)
 				tick.Stop()
@@ -201,7 +204,7 @@ func stopETA(s routeStop, id *stopLoc) {
 				sCount = ui.RefreshInterval
 			}
 			sCount--
-			updateTime(newFlex, sCount)
+			updateTime(sCount)
 		}
 	}
 }

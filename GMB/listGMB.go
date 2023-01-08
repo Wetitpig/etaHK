@@ -16,28 +16,10 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type stop struct {
-	stops map[stopLoc]*routeStop
-	keys  []stopLoc
-}
-
 type routeStop struct {
 	id   int
 	name ui.Lang
 	eta  []eta
-}
-
-type direction struct {
-	orig, dest, remarks ui.Lang
-	stops               []routeStop
-	fareTable           [][]ui.Lang
-}
-
-type route struct {
-	code, region string
-	description  ui.Lang
-	directions   []direction
-	fareNotes    ui.Lang
 }
 
 var (
@@ -51,8 +33,11 @@ type getData struct {
 	Data interface{} `json:"data"`
 }
 
-func updateTime(view *tview.Flex, sCount int) {
-	view.GetItem(0).(*tview.TextView).SetText(nextUpdateLabel[ui.UserLang] + strconv.Itoa(sCount))
+func updateTime(sCount int) {
+	_, frame := ui.Pages.GetFrontPage()
+	ui.App.QueueUpdateDraw(func() {
+		frame.(*tview.Frame).Clear().AddText(nextUpdateLabel[ui.UserLang]+strconv.Itoa(sCount), true, tview.AlignLeft, tcell.ColorDefault)
+	})
 }
 
 func renderRoutesEvery(form *tview.Form) {
@@ -242,7 +227,7 @@ func ListGMB() {
 						for _, d := range dirInfo {
 							dir := d.(map[string]interface{})
 							routeData.directions[int(dir["route_seq"].(float64))-1] = direction{
-								formLang(dir, "orig"), formLang(dir, "dest"), formLang(routeInfo, "remarks"), []routeStop{}, nil,
+								formLang(dir, "orig"), formLang(dir, "dest"), formLang(routeInfo, "remarks"), []routeStop{}, fareTable{},
 							}
 						}
 						routeLock.Lock()

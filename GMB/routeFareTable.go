@@ -16,6 +16,11 @@ import (
 	"github.com/rivo/tview"
 )
 
+type fareTable struct {
+	breaks []ui.Lang
+	fare   [][]string
+}
+
 func getFareTable(wg *sync.WaitGroup, id int) {
 	defer wg.Done()
 	rt := routeList[id]
@@ -97,14 +102,13 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 				fallthrough
 			default:
 				if d >= 0 {
-					w = w[1:]
 					if i == 0 {
-						rt.directions[d].fareTable = append(rt.directions[d].fareTable, make([]ui.Lang, len(w)))
+						rt.directions[d].fareTable.fare = append(rt.directions[d].fareTable.fare, w[1:len(w)-1])
+						rt.directions[d].fareTable.breaks = append(rt.directions[d].fareTable.breaks, ui.Lang{w[len(w)-1]})
+					} else {
+						rt.directions[d].fareTable.breaks[k][i] = w[len(w)-1]
+						k++
 					}
-					for l, x := range w {
-						rt.directions[d].fareTable[k][l][i] = x
-					}
-					k++
 				}
 			}
 		}
@@ -118,7 +122,7 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 
 func (dir *direction) renderRouteFares(fn ui.Lang, t *tview.Grid) {
 	fareTableLabel := ui.Lang{"車資表", "车资表", "Faretable"}
-	rc := len(dir.fareTable)
+	rc := len(dir.fareTable.breaks)
 
 	t.Clear().AddItem(tview.NewTextView().
 		SetText("[::u]"+fareTableLabel[ui.UserLang]+"[::-]").
@@ -129,24 +133,25 @@ func (dir *direction) renderRouteFares(fn ui.Lang, t *tview.Grid) {
 
 	origHeights := make([]int, 0, rc)
 	r := 2
-	for _, row := range dir.fareTable {
+	for i, row := range dir.fareTable.fare {
 		for c, td := range row {
-			text := td[ui.UserLang]
-			cell := tview.NewTextView().
-				SetText(text).
-				SetTextColor(tcell.ColorYellow).
-				SetWrap(true)
-			colSpan := 1
-			if c == len(row)-1 {
-				cell.SetTextStyle(tcell.StyleDefault.Bold(true))
-				colSpan = rc - c
-				origHeights = append(origHeights, runewidth.StringWidth(text))
-			} else {
-				cell.SetTextAlign(tview.AlignCenter)
-			}
-			t.AddItem(cell,
-				r, c, 1, colSpan, 0, 0, false)
+			t.AddItem(
+				tview.NewTextView().
+					SetText(td).
+					SetTextColor(tcell.ColorYellow).
+					SetWrap(true).
+					SetTextAlign(tview.AlignCenter),
+				r, c, 1, 1, 0, 0, false)
 		}
+		b := dir.fareTable.breaks[i][ui.UserLang]
+		t.AddItem(
+			tview.NewTextView().
+				SetText(b).
+				SetTextColor(tcell.ColorYellow).
+				SetWrap(true).
+				SetTextStyle(tcell.StyleDefault.Bold(true)),
+			r, i, 1, rc-i, 0, 0, false)
+		origHeights = append(origHeights, runewidth.StringWidth(b))
 		r++
 	}
 
@@ -174,7 +179,7 @@ func (dir *direction) renderRouteFares(fn ui.Lang, t *tview.Grid) {
 			return nil
 		case tcell.KeyDown:
 			r, c := t.GetOffset()
-			if r == len(dir.fareTable)+2 {
+			if r == len(dir.fareTable.breaks)+2 {
 				r, c = notesView.GetScrollOffset()
 				notesView.ScrollTo(r+1, c)
 			} else {
@@ -187,9 +192,9 @@ func (dir *direction) renderRouteFares(fn ui.Lang, t *tview.Grid) {
 	delete(ui.BeforeDrawFn, "renderRouteFares")
 	ui.BeforeDrawFn["renderRouteFares"] = func(tcell.Screen) bool {
 		if name, pages := ui.Pages.GetFrontPage(); name == "routeGMB" {
-			if name, _ = pages.(*tview.Flex).GetItem(2).(*tview.Pages).GetFrontPage(); name == "fare" {
+			if name, _ = pages.(*tview.Frame).GetPrimitive().(*tview.Flex).GetItem(1).(*tview.Pages).GetFrontPage(); name == "fare" {
 				w, _ := consolesize.GetConsoleSize()
-				rc := len(dir.fareTable)
+				rc := len(dir.fareTable.breaks)
 
 				height[0], height[1] = 1, 1
 				for i, width := range origHeights[:rc] {

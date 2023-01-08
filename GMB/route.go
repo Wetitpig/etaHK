@@ -10,6 +10,19 @@ import (
 	"github.com/rivo/tview"
 )
 
+type direction struct {
+	orig, dest, remarks ui.Lang
+	stops               []routeStop
+	fareTable
+}
+
+type route struct {
+	code, region string
+	description  ui.Lang
+	directions   []direction
+	fareNotes    ui.Lang
+}
+
 var nextUpdateLabel ui.Lang
 
 func initRouteDetail() (newFlex *tview.Flex, view *tview.TextView) {
@@ -23,8 +36,6 @@ func initRouteDetail() (newFlex *tview.Flex, view *tview.TextView) {
 		newFlex = tview.NewFlex().
 			SetDirection(tview.FlexRow).
 			AddItem(tview.NewTextView().
-				SetChangedFunc(ui.HDraw), 0, 5, false).
-			AddItem(tview.NewTextView().
 				SetChangedFunc(ui.HDraw).
 				SetTextAlign(tview.AlignCenter), 0, 20, false).
 			AddItem(tview.NewPages().
@@ -32,14 +43,14 @@ func initRouteDetail() (newFlex *tview.Flex, view *tview.TextView) {
 				AddPage("fare", tview.NewGrid().
 					SetBorders(false).
 					SetGap(0, 0), true, false),
-				0, 75, true)
-		ui.Pages.AddAndSwitchToPage("routeGMB", newFlex, true)
+				0, 80, true)
+		ui.Pages.AddAndSwitchToPage("routeGMB", tview.NewFrame(newFlex).SetBorders(0, 0, 0, 0, 0, 0), true)
 	} else {
 		_, nf := ui.Pages.
 			SwitchToPage("routeGMB").
 			GetFrontPage()
-		newFlex = nf.(*tview.Flex)
-		_, nv := newFlex.GetItem(2).(*tview.Pages).
+		newFlex = nf.(*tview.Frame).GetPrimitive().(*tview.Flex)
+		_, nv := newFlex.GetItem(1).(*tview.Pages).
 			SwitchToPage("eta").
 			GetFrontPage()
 		view = nv.(*tview.TextView)
@@ -50,9 +61,12 @@ func initRouteDetail() (newFlex *tview.Flex, view *tview.TextView) {
 func routeDetail(index, selectedDir int, seq int) {
 	{
 		var wg sync.WaitGroup
-		if routeList[index].directions[0].fareTable == nil {
-			wg.Add(1)
-			go getFareTable(&wg, index)
+		for _, dir := range routeList[index].directions {
+			if len(dir.fareTable.fare) == 0 {
+				wg.Add(1)
+				go getFareTable(&wg, index)
+				break
+			}
 		}
 		for i, v := range routeList[index].directions {
 			if len(v.stops) == 0 {
@@ -76,7 +90,7 @@ func routeDetail(index, selectedDir int, seq int) {
 				etaChan <- selectedDir
 				stopChan <- true
 			case 'f':
-				pages := newFlex.GetItem(2).(*tview.Pages)
+				pages := newFlex.GetItem(1).(*tview.Pages)
 				name, _ := pages.GetFrontPage()
 				if name == "eta" {
 					pages.SwitchToPage("fare")
@@ -138,10 +152,10 @@ func routeDetail(index, selectedDir int, seq int) {
 		select {
 		case v, ok := <-stopChan:
 			if ok {
-				name, elem := newFlex.GetItem(2).(*tview.Pages).GetFrontPage()
+				name, elem := newFlex.GetItem(1).(*tview.Pages).GetFrontPage()
 				if v {
-					updateTime(newFlex, sCount)
-					newFlex.GetItem(1).(*tview.TextView).SetText(
+					updateTime(sCount)
+					newFlex.GetItem(0).(*tview.TextView).SetText(
 						routeList[index].directions[selectedDir].orig[ui.UserLang] +
 							"\n=>\n" +
 							routeList[index].directions[selectedDir].dest[ui.UserLang],
@@ -164,7 +178,7 @@ func routeDetail(index, selectedDir int, seq int) {
 				sCount = ui.RefreshInterval
 			}
 			sCount--
-			updateTime(newFlex, sCount)
+			updateTime(sCount)
 		}
 	}
 }
