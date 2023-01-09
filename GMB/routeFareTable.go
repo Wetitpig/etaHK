@@ -91,7 +91,7 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 			case 2:
 				d = -1
 				for e, dir := range rt.directions {
-					if strings.Contains(dir.orig[i], w[1]) {
+					if strings.Contains(strings.ToLower(dir.orig[i]), strings.ToLower(w[1])) {
 						d, k = e, 0
 						break
 					}
