@@ -30,7 +30,7 @@ func (stopT *stop) renderStopName(view *tview.TextView) {
 	view.SetText(stopName)
 }
 
-func (data *stop) renderStopETA(view *tview.TextView, end chan bool) {
+func (data *stop) renderStopETA(view *tview.TextView, end chan<- bool) {
 	selected := ui.RetainHighlight(view)
 	view.SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEnter {

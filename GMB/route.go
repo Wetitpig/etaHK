@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Wetitpig/etaHK/common"
 	"github.com/Wetitpig/etaHK/ui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -130,15 +131,21 @@ func routeDetail(index, selectedDir int, seq int) {
 	go func() {
 		for {
 			if msg, ok := <-etaChan; ok {
-				var (
-					etaLock sync.Mutex
-					etaGp   sync.WaitGroup
-				)
-				etaGp.Add(len(routeList[index].directions[msg].stops))
-				for i := range routeList[index].directions[msg].stops {
-					go routeList[index].queueRouteETA(&etaGp, &etaLock, index, i, msg)
+				r := routeList[index]
+				totalLen := len(r.directions[msg].stops)
+				queueChan, etaC := make(chan [3]int, totalLen), make(chan common.JsonRetMsg[[]eta], totalLen)
+				for i := 0; i < common.MAX_CONN; i++ {
+					go r.queueRouteETA(queueChan, etaC)
 				}
-				etaGp.Wait()
+				for i := range r.directions[msg].stops {
+					queueChan <- [3]int{index, i, msg}
+				}
+				close(queueChan)
+				for j := 0; j < totalLen; j++ {
+					out := <-etaC
+					r.directions[msg].stops[out.UID].eta = out.Ret
+				}
+				close(etaC)
 				stopChan <- false
 			} else {
 				return

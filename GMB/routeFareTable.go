@@ -9,6 +9,7 @@ import (
 	htmlmd "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/JohannesKaufmann/html-to-markdown/plugin"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/Wetitpig/etaHK/common"
 	"github.com/Wetitpig/etaHK/ui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
@@ -24,9 +25,8 @@ type fareTable struct {
 func getFareTable(wg *sync.WaitGroup, id int) {
 	defer wg.Done()
 	rt := routeList[id]
-	var fareChan [3]chan *goquery.Selection
-	for i := range fareChan {
-		fareChan[i] = make(chan *goquery.Selection)
+	fareChan := make(chan common.JsonRetMsg[*goquery.Selection], 3)
+	for i := 0; i < 3; i++ {
 		go func(lang int) {
 			resp, err := http.Get("https://h2-app-rr.hkemobility.gov.hk/ris_page/get_gmb_detail.php?route_id=" + strconv.Itoa(id) + "&lang=" + ui.Language(lang).String())
 			if err != nil {
@@ -57,8 +57,7 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 								Children().First(). // tbody
 								Children().First(). // tr
 								Children().First()  // td
-			fareChan[lang] <- fareTableHtml
-			close(fareChan[lang])
+			fareChan <- common.JsonRetMsg[*goquery.Selection]{lang, fareTableHtml}
 		}(i)
 	}
 
@@ -66,8 +65,8 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 	converter.Use(plugin.TableCompat())
 	var fareNotes strings.Builder
 	for i := 0; i < 3; i++ {
-		html := <-fareChan[i]
-		md := converter.Convert(html)
+		out := <-fareChan
+		md := converter.Convert(out.Ret)
 		md = strings.Replace(md, "\n\n", "\n", -1)
 		rows := strings.Split(md, "\n")
 
@@ -91,7 +90,7 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 			case 2:
 				d = -1
 				for e, dir := range rt.directions {
-					if strings.Contains(strings.ToLower(dir.orig[i]), strings.ToLower(w[1])) {
+					if strings.Contains(strings.ToLower(dir.orig[out.UID]), strings.ToLower(w[1])) {
 						d, k = e, 0
 						break
 					}
@@ -104,18 +103,17 @@ func getFareTable(wg *sync.WaitGroup, id int) {
 				if d >= 0 {
 					if i == 0 {
 						rt.directions[d].fareTable.fare = append(rt.directions[d].fareTable.fare, w[1:len(w)-1])
-						rt.directions[d].fareTable.breaks = append(rt.directions[d].fareTable.breaks, ui.Lang{w[len(w)-1]})
-					} else {
-						rt.directions[d].fareTable.breaks[k][i] = w[len(w)-1]
-						k++
+						rt.directions[d].fareTable.breaks = append(rt.directions[d].fareTable.breaks, ui.Lang{})
 					}
+					rt.directions[d].fareTable.breaks[k][out.UID] = w[len(w)-1]
+					k++
 				}
 			}
 		}
 		if !j {
-			rt.fareNotes[i] = ""
+			rt.fareNotes[out.UID] = ""
 		} else {
-			rt.fareNotes[i] += fareNotes.String()
+			rt.fareNotes[out.UID] += fareNotes.String()
 		}
 	}
 }

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 
+	"github.com/Wetitpig/etaHK/common"
 	"github.com/Wetitpig/etaHK/ui"
 	"github.com/agnivade/levenshtein"
 	"github.com/gdamore/tcell/v2"
@@ -182,6 +182,39 @@ var (
 	routeList         map[int]*route
 )
 
+func getRoute(input <-chan [2]string, res chan<- common.JsonRetMsg[*route]) {
+	for r := range input {
+		resp, err := http.Get(APIBASE + "/route/" + r[0] + "/" + r[1])
+		if err != nil {
+			ui.Fatalln("Unable to obtain GMB route info for route", r[1], "in region", r[0])
+		}
+
+		var pj getData
+		if json.NewDecoder(resp.Body).Decode(&pj) != nil {
+			ui.Fatalln("Unable to unmarshal GMB route list.")
+		}
+		for _, ri := range pj.Data.([]interface{}) {
+			routeInfo := ri.(map[string]interface{})
+			dirInfo := routeInfo["directions"].([]interface{})
+
+			routeData := route{
+				r[1], r[0], formLang(routeInfo, "description"), make([]direction, len(dirInfo)), ui.Lang{
+					"[yellow::u]備註[::-]\n", "[yellow::u]备注[::-]\n", "[yellow::u]Notes[::-]\n",
+				},
+			}
+
+			for _, d := range dirInfo {
+				dir := d.(map[string]interface{})
+				routeData.directions[int(dir["route_seq"].(float64))-1] = direction{
+					formLang(dir, "orig"), formLang(dir, "dest"), formLang(routeInfo, "remarks"), []routeStop{}, fareTable{},
+				}
+			}
+			res <- common.JsonRetMsg[*route]{int(routeInfo["route_id"].(float64)), &routeData}
+		}
+		resp.Body.Close()
+	}
+}
+
 func ListGMB() {
 	if routeList == nil {
 		region = "HKI"
@@ -194,50 +227,25 @@ func ListGMB() {
 		}
 		routes := searchRoutes()
 
-		var workGp sync.WaitGroup
 		routeList = make(map[int]*route)
-		var routeLock sync.Mutex
+
+		totalLen := len(routes["HKI"]) + len(routes["KLN"]) + len(routes["NT"])
+		result, routeIn := make(chan common.JsonRetMsg[*route], totalLen), make(chan [2]string, totalLen)
+
+		for c := 0; c < common.MAX_CONN; c++ {
+			go getRoute(routeIn, result)
+		}
 
 		for region, routeReg := range routes {
-			workGp.Add(len(routeReg))
 			for _, routeCode := range routeReg {
-				go func(region, routeCode string) {
-					defer workGp.Done()
-
-					resp, err := http.Get(APIBASE + "/route/" + region + "/" + routeCode)
-					if err != nil {
-						ui.Fatalln("Unable to obtain GMB route info for route", routeCode, "in region", region)
-					}
-					defer resp.Body.Close()
-
-					var pj getData
-					if json.NewDecoder(resp.Body).Decode(&pj) != nil {
-						ui.Fatalln("Unable to unmarshal GMB route list.")
-					}
-					for _, ri := range pj.Data.([]interface{}) {
-						routeInfo := ri.(map[string]interface{})
-						dirInfo := routeInfo["directions"].([]interface{})
-
-						routeData := route{
-							routeCode, region, formLang(routeInfo, "description"), make([]direction, len(dirInfo)), ui.Lang{
-								"[yellow::u]備註[::-]\n", "[yellow::u]备注[::-]\n", "[yellow::u]Notes[::-]\n",
-							},
-						}
-
-						for _, d := range dirInfo {
-							dir := d.(map[string]interface{})
-							routeData.directions[int(dir["route_seq"].(float64))-1] = direction{
-								formLang(dir, "orig"), formLang(dir, "dest"), formLang(routeInfo, "remarks"), []routeStop{}, fareTable{},
-							}
-						}
-						routeLock.Lock()
-						routeList[int(routeInfo["route_id"].(float64))] = &routeData
-						routeLock.Unlock()
-					}
-				}(region, routeCode)
+				routeIn <- [2]string{region, routeCode}
 			}
 		}
-		workGp.Wait()
+		close(routeIn)
+		for j := 0; j < totalLen; j++ {
+			res := <-result
+			routeList[res.UID] = res.Ret
+		}
 
 		ui.Pages.AddAndSwitchToPage("routesGMB", renderRoutes(), true)
 	} else {

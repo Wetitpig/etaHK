@@ -7,12 +7,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Wetitpig/etaHK/common"
 	"github.com/Wetitpig/etaHK/ui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
-func renderRouteETA(view *tview.TextView, id, sDir int, end chan bool) {
+func renderRouteETA(view *tview.TextView, id, sDir int, end chan<- bool) {
 	selected := ui.RetainHighlight(view)
 	dir := routeList[id].directions[sDir]
 	view.SetDoneFunc(func(key tcell.Key) {
@@ -59,18 +60,20 @@ func (r *route) listStops(wg *sync.WaitGroup, id, i int) {
 	}
 }
 
-func (r *route) queueRouteETA(wg *sync.WaitGroup, etaLock *sync.Mutex, id, i, msg int) {
-	defer wg.Done()
-	if resp, err := http.Get(APIBASE + "/eta/route-stop/" + strconv.Itoa(id) + "/" + strconv.Itoa(msg+1) + "/" + strconv.Itoa(i+1)); err == nil {
-		defer resp.Body.Close()
-		var pj getData
-		if json.NewDecoder(resp.Body).Decode(&pj) == nil {
-			re := pj.Data.(map[string]interface{})
-			if re["enabled"].(bool) {
-				etaLock.Lock()
-				r.directions[msg].stops[i].eta = parseETA(re)
-				etaLock.Unlock()
+func (r *route) queueRouteETA(queue <-chan [3]int, etaC chan<- common.JsonRetMsg[[]eta]) {
+	for k := range queue {
+		id, i, msg := k[0], k[1], k[2]
+		if resp, err := http.Get(APIBASE + "/eta/route-stop/" + strconv.Itoa(id) + "/" + strconv.Itoa(msg+1) + "/" + strconv.Itoa(i+1)); err == nil {
+			var pj getData
+			if json.NewDecoder(resp.Body).Decode(&pj) == nil {
+				re := pj.Data.(map[string]interface{})
+				if re["enabled"].(bool) {
+					etaC <- common.JsonRetMsg[[]eta]{i, parseETA(re)}
+				} else {
+					etaC <- common.JsonRetMsg[[]eta]{i, []eta{}}
+				}
 			}
+			resp.Body.Close()
 		}
 	}
 }
