@@ -133,7 +133,7 @@ func initStopETA() (newFlex *tview.Flex) {
 
 func stopETA(s routeStop, id *stopLoc) {
 	etaChan := make(chan int)
-	stopChan := make(chan bool, 1)
+	printChan := make(chan bool, 1)
 
 	var sCount int
 	stopT := &stop{make(map[stopLoc]*routeStop), []stopLoc{}}
@@ -156,29 +156,25 @@ func stopETA(s routeStop, id *stopLoc) {
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case 't', 's', 'e':
-				stopChan <- true
+				printChan <- true
 			case 'b':
-				close(stopChan)
+				close(printChan)
 				ui.Pages.SwitchToPage("routesGMB")
 				_, form := ui.Pages.GetFrontPage()
 				renderRoutesLang(form.(*tview.Form))
 			case 'h':
-				close(stopChan)
+				close(printChan)
 				ui.Pages.SwitchToPage("home")
 			}
 		}
 		return event
 	})
-	stopChan <- true
+	printChan <- true
 
 	go func() {
-		for {
-			if msg, ok := <-etaChan; ok {
-				stopT.queueStopETA(msg)
-				stopChan <- false
-			} else {
-				return
-			}
+		for msg := range etaChan {
+			stopT.queueStopETA(msg)
+			printChan <- false
 		}
 	}()
 
@@ -186,13 +182,13 @@ func stopETA(s routeStop, id *stopLoc) {
 	newFlex.GetItem(1).(*tview.TextView).Highlight(id.marshal())
 	for {
 		select {
-		case v, ok := <-stopChan:
+		case v, ok := <-printChan:
 			if ok {
 				if v {
 					updateTime(sCount)
 					stopT.renderStopName(newFlex.GetItem(0).(*tview.TextView))
 				}
-				stopT.renderStopETA(newFlex.GetItem(1).(*tview.TextView), stopChan)
+				stopT.renderStopETA(newFlex.GetItem(1).(*tview.TextView), printChan)
 			} else {
 				close(etaChan)
 				tick.Stop()

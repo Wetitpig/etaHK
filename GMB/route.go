@@ -79,7 +79,7 @@ func routeDetail(index, selectedDir int, seq int) {
 	}
 	var sCount int
 
-	etaChan, stopChan := make(chan int), make(chan bool, 1)
+	etaChan, printChan := make(chan int), make(chan bool, 1)
 
 	nextUpdateLabel = ui.Lang{"下次更新：", "下回更新：", "Next update: "}
 	newFlex, view := initRouteDetail()
@@ -89,7 +89,7 @@ func routeDetail(index, selectedDir int, seq int) {
 			case 'r':
 				selectedDir = (selectedDir + 1) % len(routeList[index].directions)
 				etaChan <- selectedDir
-				stopChan <- true
+				printChan <- true
 			case 'f':
 				pages := newFlex.GetItem(1).(*tview.Pages)
 				name, _ := pages.GetFrontPage()
@@ -98,16 +98,16 @@ func routeDetail(index, selectedDir int, seq int) {
 				} else if name == "fare" {
 					pages.SwitchToPage("eta")
 				}
-				stopChan <- false
+				printChan <- false
 			case 't', 's', 'e':
-				stopChan <- true
+				printChan <- true
 			case 'b':
-				close(stopChan)
+				close(printChan)
 				ui.Pages.SwitchToPage("routesGMB")
 				_, form := ui.Pages.GetFrontPage()
 				renderRoutesLang(form.(*tview.Form))
 			case 'h':
-				close(stopChan)
+				close(printChan)
 				ui.Pages.SwitchToPage("home")
 			}
 		}
@@ -126,30 +126,26 @@ func routeDetail(index, selectedDir int, seq int) {
 		}
 		return event
 	})
-	stopChan <- true
+	printChan <- true
 
 	go func() {
-		for {
-			if msg, ok := <-etaChan; ok {
-				r := routeList[index]
-				totalLen := len(r.directions[msg].stops)
-				queueChan, etaC := make(chan [3]int, totalLen), make(chan common.JsonRetMsg[[]eta], totalLen)
-				for i := 0; i < common.MAX_CONN; i++ {
-					go r.queueRouteETA(queueChan, etaC)
-				}
-				for i := range r.directions[msg].stops {
-					queueChan <- [3]int{index, i, msg}
-				}
-				close(queueChan)
-				for j := 0; j < totalLen; j++ {
-					out := <-etaC
-					r.directions[msg].stops[out.UID].eta = out.Ret
-				}
-				close(etaC)
-				stopChan <- false
-			} else {
-				return
+		for msg := range etaChan {
+			r := routeList[index]
+			totalLen := len(r.directions[msg].stops)
+			queueChan, etaC := make(chan [3]int, totalLen), make(chan common.JsonRetMsg[[]eta], totalLen)
+			for i := 0; i < common.MAX_CONN; i++ {
+				go r.queueRouteETA(queueChan, etaC)
 			}
+			for i := range r.directions[msg].stops {
+				queueChan <- [3]int{index, i, msg}
+			}
+			close(queueChan)
+			for j := 0; j < totalLen; j++ {
+				out := <-etaC
+				r.directions[msg].stops[out.UID].eta = out.Ret
+			}
+			close(etaC)
+			printChan <- false
 		}
 	}()
 
@@ -157,7 +153,7 @@ func routeDetail(index, selectedDir int, seq int) {
 	view.Highlight(strconv.Itoa(seq))
 	for {
 		select {
-		case v, ok := <-stopChan:
+		case v, ok := <-printChan:
 			if ok {
 				name, elem := newFlex.GetItem(1).(*tview.Pages).GetFrontPage()
 				if v {
@@ -170,7 +166,7 @@ func routeDetail(index, selectedDir int, seq int) {
 				}
 
 				if name == "eta" {
-					renderRouteETA(elem.(*tview.TextView), index, selectedDir, stopChan)
+					renderRouteETA(elem.(*tview.TextView), index, selectedDir, printChan)
 				} else if name == "fare" {
 					routeList[index].directions[selectedDir].renderRouteFares(routeList[index].fareNotes, elem.(*tview.Grid))
 				}
