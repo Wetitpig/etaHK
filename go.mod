@@ -6,11 +6,13 @@ require (
 	github.com/JohannesKaufmann/html-to-markdown v1.3.6
 	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/agnivade/levenshtein v1.1.1
+	github.com/dimchansky/utfbom v1.1.1
+	github.com/dustin/go-humanize v1.0.1
 	github.com/gdamore/tcell/v2 v2.5.4
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/nathan-fiscaletti/consolesize-go v0.0.0-20220204101620-317176b6684d
 	github.com/rivo/tview v0.0.0-20230104153304-892d1a2eb0da
-	golang.org/x/exp v0.0.0-20230108222341-4b8118a2686a
+	golang.org/x/exp v0.0.0-20230116083435-1de6713980de
 )
 
 require (

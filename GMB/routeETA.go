@@ -40,13 +40,13 @@ func (r *route) listStops(wg *sync.WaitGroup, id, i int) {
 	defer wg.Done()
 	resp, err := http.Get(APIBASE + "/route-stop/" + strconv.Itoa(id) + "/" + strconv.Itoa(i+1))
 	if err != nil {
-		ui.Fatalln("Unable to obtain GMB stop info for route", r.code, "in region", region)
+		ui.Fatalln("Unable to obtain GMB stop info for route", r.code, "in region", regionSelected.Code())
 	}
 	defer resp.Body.Close()
 
 	var pj getData
 	if json.NewDecoder(resp.Body).Decode(&pj) != nil {
-		ui.Fatalln("Unable to unmarshal GMB stop list for route", r.code, "in region", region)
+		ui.Fatalln("Unable to unmarshal GMB stop list for route", r.code, "in region", regionSelected.Code())
 	}
 
 	rs := pj.Data.(map[string]interface{})["route_stops"].([]interface{})

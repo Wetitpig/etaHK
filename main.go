@@ -18,6 +18,7 @@ func main() {
 	ui.Pages = tview.NewPages()
 
 	ui.Pages.AddAndSwitchToPage("home", homepage(), true)
+	ui.UpdateHomepage()
 
 	ui.UserLang = ui.TC
 	ui.App.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {

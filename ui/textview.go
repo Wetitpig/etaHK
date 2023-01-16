@@ -58,3 +58,7 @@ func (t *TextViewBuffer) Write(input ...string) {
 func (t *TextViewBuffer) Print(view *tview.TextView) {
 	view.Write(t.buf.Bytes())
 }
+
+func (t *TextViewBuffer) Str(view *tview.TextView) string {
+	return t.buf.String()
+}

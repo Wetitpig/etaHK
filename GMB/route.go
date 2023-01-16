@@ -24,8 +24,6 @@ type route struct {
 	fareNotes    ui.Lang
 }
 
-var nextUpdateLabel ui.Lang
-
 func initRouteDetail() (newFlex *tview.Flex, view *tview.TextView) {
 	if !ui.Pages.HasPage("routeGMB") {
 		view = tview.NewTextView().
@@ -81,7 +79,6 @@ func routeDetail(index, selectedDir int, seq int) {
 
 	etaChan, printChan := make(chan int), make(chan bool, 1)
 
-	nextUpdateLabel = ui.Lang{"下次更新：", "下回更新：", "Next update: "}
 	newFlex, view := initRouteDetail()
 	newFlex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyRune {

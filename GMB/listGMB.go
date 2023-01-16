@@ -10,9 +10,9 @@ import (
 	"github.com/Wetitpig/etaHK/ui"
 	"github.com/agnivade/levenshtein"
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/nathan-fiscaletti/consolesize-go"
 	"github.com/rivo/tview"
-	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
 
@@ -23,8 +23,8 @@ type routeStop struct {
 }
 
 var (
-	region   string
-	routeRID []int
+	regionSelected region
+	routeRID       []int
 )
 
 const APIBASE = "https://data.etagmb.gov.hk"
@@ -36,7 +36,7 @@ type getData struct {
 func updateTime(sCount int) {
 	_, frame := ui.Pages.GetFrontPage()
 	ui.App.QueueUpdateDraw(func() {
-		frame.(*tview.Frame).Clear().AddText(nextUpdateLabel[ui.UserLang]+strconv.Itoa(sCount), true, tview.AlignLeft, tcell.ColorDefault)
+		frame.(*tview.Frame).Clear().AddText(ui.NextUpdateLabel[ui.UserLang]+strconv.Itoa(sCount), true, tview.AlignLeft, tcell.ColorDefault)
 	})
 }
 
@@ -46,7 +46,7 @@ func renderRoutesEvery(form *tview.Form) {
 	routeRID = routeRID[:0]
 	searchStr := form.GetFormItem(1).(*tview.InputField).GetText()
 	for i, v := range routeList {
-		if strings.Contains(strings.ToUpper(v.code), strings.ToUpper(searchStr)) && v.region == region {
+		if strings.Contains(strings.ToUpper(v.code), strings.ToUpper(searchStr)) && v.region == regionSelected.Code() {
 			routeRID = append(routeRID, i)
 		}
 	}
@@ -65,7 +65,7 @@ func renderRoutesEvery(form *tview.Form) {
 		v := routeList[id]
 
 		rg := strconv.Itoa(id)
-		buf.Write("[\"", rg, "\"]", "[yellow]", v.code, "\t", v.directions[0].orig[ui.UserLang])
+		buf.Write("[\"", rg, "\"]", "[yellow]", runewidth.FillRight(v.code, 5), v.directions[0].orig[ui.UserLang])
 		if len(v.directions) > 1 {
 			buf.Write("<")
 		}
@@ -87,11 +87,11 @@ func renderRoutesEvery(form *tview.Form) {
 func renderRoutesLang(form *tview.Form) {
 	form.GetFormItem(0).(*tview.DropDown).
 		SetLabel(regionSelectLabel[ui.UserLang]).
-		SetOptions([]string{regionLabels["HKI"][ui.UserLang], regionLabels["KLN"][ui.UserLang], regionLabels["NT"][ui.UserLang]}, func(text string, index int) {
-			region = maps.Keys(regionLabels)[index]
+		SetOptions(regionLabelLang(), func(text string, index int) {
+			regionSelected = region(index)
 			renderRoutesEvery(form)
 		})
-	form.GetFormItem(1).(*tview.InputField).SetLabel(routeSelectLabel[ui.UserLang])
+	form.GetFormItem(1).(*tview.InputField).SetLabel(ui.RouteSelectLabel[ui.UserLang])
 
 	renderRoutesEvery(form)
 }
@@ -100,8 +100,8 @@ func renderRoutes() (form *tview.Form) {
 	_, h := consolesize.GetConsoleSize()
 
 	form = tview.NewForm().
-		AddDropDown(regionSelectLabel[ui.UserLang], []string{regionLabels["HKI"][ui.UserLang], regionLabels["KLN"][ui.UserLang], regionLabels["NT"][ui.UserLang]}, 0, nil).
-		AddInputField(routeSelectLabel[ui.UserLang], "", 5, nil, func(text string) { renderRoutesEvery(form) }).
+		AddDropDown(regionSelectLabel[ui.UserLang], regionLabelLang(), 0, nil).
+		AddInputField(ui.RouteSelectLabel[ui.UserLang], "", 5, nil, func(string) { renderRoutesEvery(form) }).
 		AddTextView("", "", 0, h-7, true, true)
 
 	changeLang := func(event *tcell.EventKey) *tcell.EventKey {
@@ -111,13 +111,14 @@ func renderRoutes() (form *tview.Form) {
 				renderRoutesLang(form)
 			case 'h':
 				ui.Pages.SwitchToPage("home")
+				ui.UpdateHomepage()
 			}
 		}
 		return event
 	}
 	form.GetFormItem(0).(*tview.DropDown).
 		SetSelectedFunc(func(text string, index int) {
-			region = maps.Keys(regionLabels)[index]
+			regionSelected = region(index)
 			renderRoutesEvery(form)
 		}).
 		SetInputCapture(changeLang)
@@ -153,7 +154,7 @@ func renderRoutes() (form *tview.Form) {
 	return
 }
 
-func searchRoutes() (routeMap map[string][]string) {
+func searchRoutes() (routeMap [][]string) {
 	resp, err := http.Get(APIBASE + "/route")
 	if err != nil {
 		ui.Fatalln("Unable to obtain GMB route list.")
@@ -166,10 +167,10 @@ func searchRoutes() (routeMap map[string][]string) {
 	}
 	routes := pj.Data.(map[string]interface{})["routes"].(map[string]interface{})
 
-	routeMap = make(map[string][]string)
-	for _, region := range maps.Keys(regionLabels) {
-		for _, r := range routes[region].([]interface{}) {
-			routeMap[region] = append(routeMap[region], r.(string))
+	routeMap = make([][]string, regionCount)
+	for i := region(0); i < regionCount; i++ {
+		for _, r := range routes[region(i).Code()].([]interface{}) {
+			routeMap[i] = append(routeMap[i], r.(string))
 		}
 	}
 	return
@@ -177,8 +178,6 @@ func searchRoutes() (routeMap map[string][]string) {
 
 var (
 	regionSelectLabel ui.Lang
-	routeSelectLabel  ui.Lang
-	regionLabels      map[string]ui.Lang
 	routeList         map[int]*route
 )
 
@@ -217,28 +216,26 @@ func getRoute(input <-chan [2]string, res chan<- common.JsonRetMsg[*route]) {
 
 func ListGMB() {
 	if routeList == nil {
-		region = "HKI"
+		regionSelected = HKI
 
-		regionSelectLabel, routeSelectLabel = ui.Lang{"地區：", "地区：", "Region:"}, ui.Lang{"路綫號碼", "路线号码", "Route Number"}
-		regionLabels = map[string]ui.Lang{
-			"HKI": {"香港島", "香港岛", "HK Island"},
-			"KLN": {"九龍", "九龙", "Kowloon"},
-			"NT":  {"新界 ", "新界", "N.T."},
-		}
+		regionSelectLabel = ui.Lang{"地區：", "地区：", "Region:"}
 		routes := searchRoutes()
 
 		routeList = make(map[int]*route)
 
-		totalLen := len(routes["HKI"]) + len(routes["KLN"]) + len(routes["NT"])
+		totalLen := 0
+		for i := region(0); i < regionCount; i++ {
+			totalLen += len(routes[i])
+		}
 		result, routeIn := make(chan common.JsonRetMsg[*route], totalLen), make(chan [2]string, totalLen)
 
 		for c := 0; c < common.MAX_CONN; c++ {
 			go getRoute(routeIn, result)
 		}
 
-		for region, routeReg := range routes {
+		for i, routeReg := range routes {
 			for _, routeCode := range routeReg {
-				routeIn <- [2]string{region, routeCode}
+				routeIn <- [2]string{region(i).Code(), routeCode}
 			}
 		}
 		close(routeIn)
