@@ -3,6 +3,7 @@ package Bus
 import (
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -123,6 +124,10 @@ func createBF(buttonIndex int, buttonLabel string) {
 
 		busList = bF
 		ui.Pages.AddAndSwitchToPage("routesBus", renderRoutes(), true)
+	} else if _, err := os.Stat(cacheFile); errors.Is(err, os.ErrNotExist) {
+		errReadFile()
+	} else {
+		readBus()
 	}
 	ui.Pages.HidePage("downloadBus")
 }
@@ -148,20 +153,14 @@ func initBus() {
 		"需要下载 " + sizeS + " 更新数据库。",
 		sizeS + " would be downloaded to update bus route data.",
 	}
-	buttons := ui.Lang{
-		"繼續 取消", "继续 取消", "Confirm Cancel",
-	}
 	modal := tview.NewModal().
 		SetText(downloadLabel[ui.UserLang]).
-		AddButtons(strings.Fields(buttons[ui.UserLang])).SetDoneFunc(createBF)
+		AddButtons([]string{"✔", "✘"}).
+		SetDoneFunc(createBF)
 
 	modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyRune && (event.Rune() == 't' || event.Rune() == 's' || event.Rune() == 'e') {
 			modal.SetText(downloadLabel[ui.UserLang])
-			modal.
-				ClearButtons().
-				AddButtons(strings.Fields(buttons[ui.UserLang])).SetDoneFunc(createBF)
-			ui.UpdateHomepage()
 		}
 		return event
 	})
@@ -170,14 +169,39 @@ func initBus() {
 	ui.Pages.SendToFront("downloadBus")
 }
 
+func errReadFile() {
+	NOENTLabel := ui.Lang{
+		"錯誤：無法讀取數據庫資料。",
+		"错误：无法载入数据库。",
+		"Error: Unable to import DB.",
+	}
+
+	modal := tview.NewModal().
+		SetText(NOENTLabel[ui.UserLang]).
+		AddButtons([]string{"✘"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			ui.App.Stop()
+			os.Exit(1)
+		})
+
+	modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyRune && (event.Rune() == 't' || event.Rune() == 's' || event.Rune() == 'e') {
+			modal.SetText(NOENTLabel[ui.UserLang])
+		}
+		return event
+	})
+	ui.Pages.AddPage("failRead", modal, false, true)
+	ui.Pages.SendToFront("failRead")
+}
+
 func readBus() {
 	file, err := os.Open(cacheFile)
 	if err != nil {
-		log.Fatalln("Unable to open cache file for reading.")
+		errReadFile()
 	}
 
 	if gob.NewDecoder(file).Decode(&busList) != nil {
-		log.Fatalln("Failed to decode bus list value.")
+		errReadFile()
 	}
 	file.Close()
 	ui.Pages.AddAndSwitchToPage("routesBus", renderRoutes(), true)

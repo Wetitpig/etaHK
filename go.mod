@@ -13,6 +13,7 @@ require (
 	github.com/nathan-fiscaletti/consolesize-go v0.0.0-20220204101620-317176b6684d
 	github.com/rivo/tview v0.0.0-20230104153304-892d1a2eb0da
 	golang.org/x/exp v0.0.0-20230116083435-1de6713980de
+	golang.org/x/text v0.6.0
 )
 
 require (
@@ -23,6 +24,5 @@ require (
 	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect
 	golang.org/x/term v0.4.0 // indirect
-	golang.org/x/text v0.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
