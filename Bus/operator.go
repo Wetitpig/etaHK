@@ -40,7 +40,7 @@ func (i operator) String() ui.Lang {
 
 func (r subroute) Color() string {
 	var formatStr strings.Builder
-	switch r.Operator {
+	switch r.Op {
 	case KMB, KMB + CTB, KMB + NWFB:
 		formatStr.WriteString("[#E32222]")
 	case LWB:
@@ -54,7 +54,7 @@ func (r subroute) Color() string {
 	}
 	opList := ""
 	for op := operator(1); op < opMax; op <<= 1 {
-		if o := r.Operator & op; o != 0 {
+		if o := r.Op & op; o != 0 {
 			opList += o.String()[ui.UserLang] + "/"
 		}
 	}

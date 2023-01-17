@@ -16,7 +16,7 @@ import (
 
 var (
 	chosenOp operator
-	routeRID []int
+	routeRID []uint64
 )
 
 func renderRoutesEvery(form *tview.Form) {
@@ -26,12 +26,12 @@ func renderRoutesEvery(form *tview.Form) {
 	searchStr := form.GetFormItem(0).(*tview.InputField).GetText()
 
 	for id, route := range busList.RouteIndex {
-		if chosenOp&route.Operator != 0 &&
+		if chosenOp&route.Op != 0 &&
 			strings.Contains(strings.ToUpper(route.Code), strings.ToUpper(searchStr)) {
 			routeRID = append(routeRID, id)
 		}
 	}
-	slices.SortFunc(routeRID, func(i, j int) bool {
+	slices.SortFunc(routeRID, func(i, j uint64) bool {
 		i_len := levenshtein.ComputeDistance(searchStr, busList.RouteIndex[i].Code)
 		j_len := levenshtein.ComputeDistance(searchStr, busList.RouteIndex[j].Code)
 		if i_len != j_len {
@@ -39,12 +39,12 @@ func renderRoutesEvery(form *tview.Form) {
 		} else if busList.RouteIndex[i].Code != busList.RouteIndex[j].Code {
 			return busList.RouteIndex[i].Code < busList.RouteIndex[j].Code
 		} else {
-			i_len = bits.OnesCount8(uint8(busList.RouteIndex[i].Operator))
-			j_len = bits.OnesCount8(uint8(busList.RouteIndex[j].Operator))
+			i_len = bits.OnesCount8(uint8(busList.RouteIndex[i].Op))
+			j_len = bits.OnesCount8(uint8(busList.RouteIndex[j].Op))
 			if i_len != j_len {
 				return i_len < j_len
 			} else {
-				return bits.TrailingZeros8(uint8(busList.RouteIndex[i].Operator)) < bits.TrailingZeros8(uint8(busList.RouteIndex[j].Operator))
+				return bits.TrailingZeros8(uint8(busList.RouteIndex[i].Op)) < bits.TrailingZeros8(uint8(busList.RouteIndex[j].Op))
 			}
 		}
 	})
@@ -53,9 +53,9 @@ func renderRoutesEvery(form *tview.Form) {
 	for _, id := range routeRID {
 		v := busList.RouteIndex[id]
 
-		rg := strconv.Itoa(id)
+		rg := strconv.FormatUint(id, 10)
 		buf.Write("[\"", rg, "\"]", v.Color(), runewidth.FillRight(v.Code, 6), v.Orig[ui.UserLang])
-		if len(v.Direction) > 1 {
+		if len(v.Dir) > 1 {
 			buf.Write("<")
 		}
 		buf.Write("=>", v.Dest[ui.UserLang], "[-:-]\n")
@@ -65,7 +65,7 @@ func renderRoutesEvery(form *tview.Form) {
 	}
 	buf.Print(view)
 	if len(view.GetHighlights()) == 0 && len(routeRID) > 0 {
-		view.Highlight(strconv.Itoa(routeRID[0]))
+		view.Highlight(strconv.FormatUint(routeRID[0], 10))
 	}
 	view.ScrollToHighlight()
 }
@@ -122,15 +122,15 @@ func renderRoutes() (form *tview.Form) {
 		SetChangedFunc(ui.HDraw).
 		SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 			view := form.GetFormItem(opCount + 1).(*tview.TextView)
-			i, _ := strconv.Atoi(view.GetHighlights()[0])
-			i = slices.Index(routeRID, i)
+			id, _ := strconv.ParseUint(view.GetHighlights()[0], 10, 64)
+			i := slices.Index(routeRID, id)
 			listLen := len(routeRID)
 			switch event.Key() {
 			case tcell.KeyDown:
-				ui.HighlightScroll(view, strconv.Itoa(routeRID[(i+1)%listLen]))
+				ui.HighlightScroll(view, strconv.FormatUint(routeRID[(i+1)%listLen], 10))
 				return nil
 			case tcell.KeyUp:
-				ui.HighlightScroll(view, strconv.Itoa(routeRID[(i+listLen-1)%listLen]))
+				ui.HighlightScroll(view, strconv.FormatUint(routeRID[(i+listLen-1)%listLen], 10))
 				return nil
 			default:
 				event = changeLang(event)

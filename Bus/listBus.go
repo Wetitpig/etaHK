@@ -15,10 +15,12 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type stopEntry struct {
-	RId, SId int
+	RId, SId uint64
 	SSeq     uint16
 	RSeq, UD uint8
 	Name     ui.Lang
@@ -26,18 +28,18 @@ type stopEntry struct {
 }
 
 type subroute struct {
-	Operator   operator
+	Op         operator
 	Code       string
 	Orig, Dest ui.Lang
-	Direction  [][]*stopEntry
+	Dir        [][]*stopEntry
 }
 type stop struct {
-	Name           []ui.Lang
-	StopEntryIndex []*stopEntry
+	Name        []ui.Lang
+	StopEntries []*stopEntry
 }
 type busFile struct {
-	RouteIndex map[int]subroute
-	StopIndex  map[int]stop
+	RouteIndex map[uint64]subroute
+	StopIndex  map[uint64]stop
 	Stops      []stopEntry
 }
 
@@ -51,7 +53,7 @@ const (
 func formLang(obj map[string]interface{}, k string) (c ui.Lang) {
 	if v, ok := obj[k+"C"]; ok && v != nil {
 		c = ui.Lang{
-			obj[k+"C"].(string), obj[k+"S"].(string), strings.Replace(obj[k+"E"].(string), "'", "’", -1),
+			obj[k+"C"].(string), obj[k+"S"].(string), cases.Title(language.Und).String(strings.Replace(obj[k+"E"].(string), "'", "’", -1)),
 		}
 	} else {
 		c = ui.Lang{}
@@ -79,17 +81,17 @@ func createBF(buttonIndex int, buttonLabel string) {
 		}
 
 		bF := busFile{
-			make(map[int]subroute),
-			make(map[int]stop),
+			make(map[uint64]subroute),
+			make(map[uint64]stop),
 			make([]stopEntry, 0, len(features.Features)),
 		}
 		for _, f := range features.Features {
 			bFentry := stopEntry{
-				RId:  int(f.Properties["routeId"].(float64)),
+				RId:  uint64(f.Properties["routeId"].(float64)),
 				RSeq: uint8(f.Properties["routeSeq"].(float64)) - 1,
 				SSeq: uint16(f.Properties["stopSeq"].(float64)) - 1,
 				UD:   uint8(f.Properties["stopPickDrop"].(float64)),
-				SId:  int(f.Properties["stopId"].(float64)),
+				SId:  uint64(f.Properties["stopId"].(float64)),
 				Name: formLang(f.Properties, "stopName"),
 				Fare: f.Properties["fullFare"].(float64),
 			}
@@ -107,8 +109,8 @@ func createBF(buttonIndex int, buttonLabel string) {
 			}
 		}
 		for k, v := range bF.RouteIndex {
-			if len(v.Direction[1]) == 0 {
-				v.Direction = v.Direction[:1:1]
+			if len(v.Dir[1]) == 0 {
+				v.Dir = v.Dir[:1:1]
 				bF.RouteIndex[k] = v
 			}
 		}
@@ -159,6 +161,7 @@ func initBus() {
 			modal.
 				ClearButtons().
 				AddButtons(strings.Fields(buttons[ui.UserLang])).SetDoneFunc(createBF)
+			ui.UpdateHomepage()
 		}
 		return event
 	})
