@@ -44,7 +44,7 @@ func (r *route) listStops(wg *sync.WaitGroup, id, i int) {
 	}
 	defer resp.Body.Close()
 
-	var pj getData
+	var pj common.GetData
 	if json.NewDecoder(resp.Body).Decode(&pj) != nil {
 		ui.Fatalln("Unable to unmarshal GMB stop list for route", r.code, "in region", regionSelected.Code())
 	}
@@ -55,7 +55,7 @@ func (r *route) listStops(wg *sync.WaitGroup, id, i int) {
 		s := v.(map[string]interface{})
 		r.directions[i].stops[int(s["stop_seq"].(float64))-1] = routeStop{
 			id:   int(s["stop_id"].(float64)),
-			name: formLang(s, "name"),
+			name: common.FormLang(s, "name"),
 		}
 	}
 }
@@ -64,7 +64,7 @@ func (r *route) queueRouteETA(queue <-chan [3]int, etaC chan<- common.JsonRetMsg
 	for k := range queue {
 		id, i, msg := k[0], k[1], k[2]
 		if resp, err := http.Get(APIBASE + "/eta/route-stop/" + strconv.Itoa(id) + "/" + strconv.Itoa(msg+1) + "/" + strconv.Itoa(i+1)); err == nil {
-			var pj getData
+			var pj common.GetData
 			if json.NewDecoder(resp.Body).Decode(&pj) == nil {
 				re := pj.Data.(map[string]interface{})
 				if re["enabled"].(bool) {

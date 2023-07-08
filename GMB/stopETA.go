@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wetitpig/etaHK/common"
 	"github.com/Wetitpig/etaHK/ui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -61,7 +62,7 @@ func (data *stop) renderStopETA(view *tview.TextView, end chan<- bool) {
 func (stopT stop) queueStopETA(msg int) {
 	if resp, err := http.Get(APIBASE + "/eta/stop/" + strconv.Itoa(msg)); err == nil {
 		defer resp.Body.Close()
-		var pj getData
+		var pj common.GetData
 		if json.NewDecoder(resp.Body).Decode(&pj) == nil {
 			for _, s := range pj.Data.([]interface{}) {
 				sj := s.(map[string]interface{})
@@ -95,7 +96,7 @@ func (s *stop) listStopRoutes(id int) {
 		ui.Fatalln("Unable to obtain GMB stop info for stop", id)
 	}
 	defer resp.Body.Close()
-	var pj getData
+	var pj common.GetData
 	if json.NewDecoder(resp.Body).Decode(&pj) != nil {
 		ui.Fatalln("Unable to unmarshal GMB stop info for stop", id)
 	}
@@ -103,7 +104,7 @@ func (s *stop) listStopRoutes(id int) {
 		sr := st.(map[string]interface{})
 		k := formStopLoc(sr)
 		s.stops[k] = &routeStop{
-			0, formLang(sr, "name"), []eta{},
+			0, common.FormLang(sr, "name"), []eta{},
 		}
 		s.keys = append(s.keys, k)
 	}

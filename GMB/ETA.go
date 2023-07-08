@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wetitpig/etaHK/common"
 	"github.com/Wetitpig/etaHK/ui"
 )
 
@@ -18,7 +19,7 @@ func parseETA(obj map[string]interface{}) (etaSlice []eta) {
 	for _, v := range etaSeq {
 		etaD := v.(map[string]interface{})
 		if t, e := time.Parse(time.RFC3339, etaD["timestamp"].(string)); e == nil {
-			etaSlice[int(etaD["eta_seq"].(float64))-1] = eta{t, formLang(etaD, "remarks")}
+			etaSlice[int(etaD["eta_seq"].(float64))-1] = eta{t, common.FormLang(etaD, "remarks")}
 		} else {
 			return
 		}

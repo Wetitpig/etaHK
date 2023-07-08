@@ -1,0 +1,5 @@
+{
+	"rust-analyzer.linkedProjects": [
+		"Bus/BusCrawler/Cargo.toml"
+	]
+}
