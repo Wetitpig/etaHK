@@ -10,13 +10,12 @@ import (
 
 type operator uint8
 
-const opCount = 5
+const opCount = 4
 
 const (
 	KMB operator = 1 << iota
 	LWB
 	CTB
-	NWFB
 	NLB
 	opMax
 )
@@ -29,8 +28,6 @@ func (i operator) String() ui.Lang {
 		return ui.Lang{"龍運", "龙运", "LWB"}
 	case CTB:
 		return ui.Lang{"城巴", "城巴", "CTB"}
-	case NWFB:
-		return ui.Lang{"新巴", "新巴", "NWFB"}
 	case NLB:
 		return ui.Lang{"嶼巴", "屿巴", "NLB"}
 	default:
@@ -41,14 +38,12 @@ func (i operator) String() ui.Lang {
 func (r subroute) Color() string {
 	var formatStr strings.Builder
 	switch r.Op {
-	case KMB, KMB + CTB, KMB + NWFB:
+	case KMB, KMB + CTB:
 		formatStr.WriteString("[#E32222]")
 	case LWB:
 		formatStr.WriteString("[#FF5000]")
 	case CTB, CTB + LWB:
 		formatStr.WriteString("[white:#0080FF]")
-	case NWFB:
-		formatStr.WriteString("[white:#6C3F99]")
 	case NLB:
 		formatStr.WriteString("[#53D0C2]")
 	}

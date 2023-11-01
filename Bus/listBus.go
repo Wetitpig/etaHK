@@ -160,6 +160,11 @@ func initBus() {
 
 	modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyRune && (event.Rune() == 't' || event.Rune() == 's' || event.Rune() == 'e') {
+			ui.Pages.HidePage("downloadBus")
+			ui.UpdateHomepage()
+			ui.Pages.ShowPage("downloadBus")
+			ui.Pages.SendToFront("downloadBus")
+
 			modal.SetText(downloadLabel[ui.UserLang])
 		}
 		return event
