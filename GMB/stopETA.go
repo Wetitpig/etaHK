@@ -55,7 +55,7 @@ func (data *stop) renderStopETA(view *tview.TextView, end chan<- bool) {
 		)
 	}
 	buf.Print(view)
-	view.Highlight(selected).ScrollToHighlight()
+	view.Highlight(selected)
 }
 
 func (stopT stop) queueStopETA(msg int) {
@@ -72,17 +72,17 @@ func (stopT stop) queueStopETA(msg int) {
 				}
 			}
 
-			slices.SortFunc(stopT.keys, func(iid, jid stopLoc) bool {
+			slices.SortFunc(stopT.keys, func(iid, jid stopLoc) int {
 				if len(stopT.stops[iid].eta) > 0 && len(stopT.stops[jid].eta) == 0 {
-					return true
+					return -1
 				} else if len(stopT.stops[jid].eta) > 0 && len(stopT.stops[iid].eta) == 0 {
-					return false
+					return 1
 				} else if routeList[iid.route_id].code != routeList[jid.route_id].code {
-					return routeList[iid.route_id].code < routeList[jid.route_id].code
+					return strings.Compare(routeList[iid.route_id].code, routeList[jid.route_id].code)
 				} else if iid.route_seq != jid.route_seq {
-					return iid.route_seq < jid.route_seq
+					return iid.route_seq - jid.route_seq
 				} else {
-					return iid.stop_seq < jid.stop_seq
+					return iid.stop_seq - jid.stop_seq
 				}
 			})
 		}

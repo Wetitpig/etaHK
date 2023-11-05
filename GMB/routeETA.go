@@ -33,7 +33,7 @@ func renderRouteETA(view *tview.TextView, id, sDir int, end chan<- bool) {
 		)
 	}
 	buf.Print(view)
-	view.Highlight(selected).ScrollToHighlight()
+	view.Highlight(selected)
 }
 
 func (r *route) listStops(wg *sync.WaitGroup, id, i int) {

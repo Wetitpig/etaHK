@@ -50,13 +50,13 @@ func renderRoutesEvery(form *tview.Form) {
 			routeRID = append(routeRID, i)
 		}
 	}
-	slices.SortFunc(routeRID, func(i, j int) bool {
+	slices.SortFunc(routeRID, func(i, j int) int {
 		i_len := levenshtein.ComputeDistance(searchStr, routeList[i].code)
 		j_len := levenshtein.ComputeDistance(searchStr, routeList[j].code)
 		if i_len == j_len {
-			return routeList[i].code < routeList[j].code
+			return strings.Compare(routeList[i].code, routeList[j].code)
 		} else {
-			return i_len < j_len
+			return i_len - j_len
 		}
 	})
 
@@ -81,7 +81,6 @@ func renderRoutesEvery(form *tview.Form) {
 	if len(view.GetHighlights()) == 0 && len(routeRID) > 0 {
 		view.Highlight(strconv.Itoa(routeRID[0]))
 	}
-	view.ScrollToHighlight()
 }
 
 func renderRoutesLang(form *tview.Form) {

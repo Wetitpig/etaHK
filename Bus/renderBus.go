@@ -31,20 +31,20 @@ func renderRoutesEvery(form *tview.Form) {
 			routeRID = append(routeRID, id)
 		}
 	}
-	slices.SortFunc(routeRID, func(i, j uint64) bool {
+	slices.SortFunc(routeRID, func(i, j uint64) int {
 		i_len := levenshtein.ComputeDistance(searchStr, busList.RouteIndex[i].Code)
 		j_len := levenshtein.ComputeDistance(searchStr, busList.RouteIndex[j].Code)
 		if i_len != j_len {
-			return i_len < j_len
+			return i_len - j_len
 		} else if busList.RouteIndex[i].Code != busList.RouteIndex[j].Code {
-			return busList.RouteIndex[i].Code < busList.RouteIndex[j].Code
+			return strings.Compare(busList.RouteIndex[i].Code, busList.RouteIndex[j].Code)
 		} else {
 			i_len = bits.OnesCount8(uint8(busList.RouteIndex[i].Op))
 			j_len = bits.OnesCount8(uint8(busList.RouteIndex[j].Op))
 			if i_len != j_len {
-				return i_len < j_len
+				return i_len - j_len
 			} else {
-				return bits.TrailingZeros8(uint8(busList.RouteIndex[i].Op)) < bits.TrailingZeros8(uint8(busList.RouteIndex[j].Op))
+				return bits.TrailingZeros8(uint8(busList.RouteIndex[i].Op)) - bits.TrailingZeros8(uint8(busList.RouteIndex[j].Op))
 			}
 		}
 	})
@@ -67,7 +67,6 @@ func renderRoutesEvery(form *tview.Form) {
 	if len(view.GetHighlights()) == 0 && len(routeRID) > 0 {
 		view.Highlight(strconv.FormatUint(routeRID[0], 10))
 	}
-	view.ScrollToHighlight()
 }
 
 func renderRoutesLang(form *tview.Form) {
