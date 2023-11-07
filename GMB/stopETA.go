@@ -164,7 +164,6 @@ func stopETA(s routeStop, id *stopLoc) {
 				renderRoutesLang(form.(*tview.Form))
 			case 'h':
 				close(printChan)
-				ui.Pages.SwitchToPage("home")
 			}
 		}
 		return event

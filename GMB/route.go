@@ -105,7 +105,6 @@ func routeDetail(index, selectedDir int, seq int) {
 				renderRoutesLang(form.(*tview.Form))
 			case 'h':
 				close(printChan)
-				ui.Pages.SwitchToPage("home")
 			}
 		}
 		return event

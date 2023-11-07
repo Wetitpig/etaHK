@@ -56,4 +56,5 @@ func UpdateHomepage() {
 	m := f.(*tview.Frame).GetPrimitive().(*tview.Form)
 	m.GetButton(0).SetLabel(gmbLabel[UserLang])
 	m.GetButton(1).SetLabel(busLabel[UserLang])
+	m.SetFocus(0)
 }

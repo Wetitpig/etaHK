@@ -32,6 +32,9 @@ func main() {
 				ui.UserLang = ui.SC
 			case 'e':
 				ui.UserLang = ui.EN
+			case 'h':
+				ui.Pages.SwitchToPage("home")
+				ui.UpdateHomepage()
 			case 'q':
 				ui.App.Stop()
 			}

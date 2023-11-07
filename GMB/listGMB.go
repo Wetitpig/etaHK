@@ -108,9 +108,6 @@ func renderRoutes() (form *tview.Form) {
 			switch event.Rune() {
 			case 't', 's', 'e':
 				renderRoutesLang(form)
-			case 'h':
-				ui.Pages.SwitchToPage("home")
-				ui.UpdateHomepage()
 			}
 		}
 		return event
