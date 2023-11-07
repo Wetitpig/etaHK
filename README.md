@@ -6,6 +6,8 @@ General key commands
 * `s` for switching to simplified Chinese
 * `e` for switching to English
 * `Tab` for switching between input fields.
+* `h` for returning to homepage.
+* `b` for returning to the last page.
 * `q` for quitting the utility.
 
 ## Build
@@ -33,5 +35,5 @@ Commands available
 ## TO-DO
 Bus arrival times and fares
 * KMB / LWB
-* NWFB / CTB
+* CTB
 * NLB
